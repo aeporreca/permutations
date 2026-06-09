@@ -1,9 +1,11 @@
 from math import gcd, lcm
 from collections import defaultdict
 from itertools import product
+from functools import total_ordering
 from copy import copy
 
 
+@total_ordering
 class C:
 
     def __init__(self, n=0):
@@ -64,3 +66,13 @@ class C:
         for i in range(n):
             r = r * self
         return r
+
+    def __eq__(self, other):
+        return self.cycles == other.cycles
+
+    def __le__(self, other):
+        for k in self.cycles.keys():
+            if not self.cycles[k] <= other.cycles[k]:
+                return False
+        return True
+
