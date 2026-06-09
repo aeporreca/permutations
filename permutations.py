@@ -46,6 +46,12 @@ class C:
     def __radd__(self, other):
         return self.__add__(other)
 
+    def __sub__(self, other):
+        return self + (-1) * other
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
+
     def __mul__(self, other):
         if isinstance(other, int):
             tmp = C(1)
@@ -75,4 +81,3 @@ class C:
             if not self.cycles[k] <= other.cycles[k]:
                 return False
         return True
-
