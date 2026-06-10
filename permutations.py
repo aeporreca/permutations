@@ -1,9 +1,8 @@
 from math import gcd, lcm
 from collections import defaultdict
-from itertools import product, count
+from itertools import product
 from functools import total_ordering
 from copy import copy
-from sys import stderr
 
 
 @total_ordering
@@ -113,10 +112,10 @@ class Poly:
         return f'Poly{self.coeff}'
 
 
-# Minimal polynomial of a given degree
-
+from itertools import count
 import numpy as np
 from scipy.optimize import milp, Bounds, LinearConstraint
+
 
 def minimal_poly(elem):
     if isinstance(elem, int):
@@ -132,8 +131,8 @@ def minimal_poly(elem):
         U = np.zeros(rows + 1)
         L[-1] = 1
         U[-1] = np.inf
-        constraints = LinearConstraint(A, L, U)
         c = np.zeros(deg + 1)
+        constraints = LinearConstraint(A, L, U)
         integrality = np.ones(deg + 1)
         res = milp(c=c, bounds=Bounds(),
                    constraints=constraints,
