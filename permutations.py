@@ -113,48 +113,30 @@ class Poly:
         return f'Poly{self.coeff}'
 
 
-def minimal_poly(elem, degree):
-    for n in count(0):
-        print(f'{n = }', file=stderr)
-        for coeff in product(range(-n + 1, n), repeat=degree):
-            P = Poly(1, *coeff)
-            if P(elem) == 0:
-                return P
-
-
-def linear_combination(elem, degree):
-    n = list(sorted(elem.cycles))[0]
-    bound = (n * elem.cycles[n])**(degree - 1)
-    for n in range(bound + 1):
-        print(f'{n = }', file=stderr)
-        for coeff in product(range(-n + 1, 1), repeat=degree):
-            P = Poly(1, *coeff)
-            if P(elem) == 0:
-                return P
-
-
 # Minimal polynomial of a given degree
 
 import numpy as np
 from scipy.optimize import milp, Bounds, LinearConstraint
 
-def minimal_poly(elem, deg):
-    rows = (elem**deg).lengths()[-1] + 1
-    A = np.zeros((rows + 1, deg + 1))
-    for i in range(rows):
-        for j in range(deg + 1):
-            A[i][j] = (elem**j).coeff(i)
-    A[rows][-1] = 1
-    L = np.zeros(rows + 1)
-    U = np.zeros(rows + 1)
-    L[-1] = 1
-    U[-1] = np.inf
-    constraints = LinearConstraint(A, L, U)
-    c = np.zeros(deg + 1)
-    integrality = np.ones(deg + 1)
-    res = milp(c=c, bounds=Bounds(),
-               constraints=constraints,
-               integrality=integrality)
-    if res.x is None:
-        return None
-    return Poly(*(int(n) for n in reversed(res.x)))
+def minimal_poly(elem):
+    if isinstance(elem, int):
+        elem = elem * C(1)
+    for deg in count(0):
+        rows = (elem**deg).lengths()[-1] + 1
+        A = np.zeros((rows + 1, deg + 1))
+        for i in range(rows):
+            for j in range(deg + 1):
+                A[i][j] = (elem**j).coeff(i)
+        A[rows][-1] = 1
+        L = np.zeros(rows + 1)
+        U = np.zeros(rows + 1)
+        L[-1] = 1
+        U[-1] = np.inf
+        constraints = LinearConstraint(A, L, U)
+        c = np.zeros(deg + 1)
+        integrality = np.ones(deg + 1)
+        res = milp(c=c, bounds=Bounds(),
+                   constraints=constraints,
+                   integrality=integrality)
+        if res.x is not None:
+            return Poly(*(int(n) for n in reversed(res.x)))
