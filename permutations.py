@@ -118,6 +118,8 @@ from scipy.optimize import milp, Bounds, LinearConstraint
 
 
 def minimal_poly(elem):
+    if elem == 0:
+        return Poly(1)
     if isinstance(elem, int):
         elem = elem * C(1)
     for deg in count(0):
