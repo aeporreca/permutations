@@ -155,4 +155,6 @@ def minimal_poly(elem, deg):
     res = milp(c=c, bounds=Bounds(),
                constraints=constraints,
                integrality=integrality)
+    if res.x is None:
+        return None
     return Poly(*(int(n) for n in reversed(res.x)))
