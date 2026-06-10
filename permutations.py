@@ -1,6 +1,6 @@
 from math import gcd, lcm
 from collections import defaultdict
-from itertools import product
+from itertools import product, count
 from functools import total_ordering
 from copy import copy
 
@@ -83,3 +83,16 @@ class C:
             if not self.cycles[n] <= other.cycles[n]:
                 return False
         return True
+
+
+class Poly:
+
+    def __init__(self, *coeff):
+        self.coeff = coeff
+
+    def __call__(self, val):
+        res = 0
+        n = len(self.coeff)
+        for i in range(n):
+            res = res * val + self.coeff[i]
+        return res
