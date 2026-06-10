@@ -17,20 +17,20 @@ class C:
     def __repr__(self):
         if not self.cycles:
             return '0'
-        elif list(self.cycles.keys()) == [1]:
+        elif list(self.cycles) == [1]:
             return repr(self.cycles[1])
-        elif len(self.cycles.keys()) == 1:
-            k = list(self.cycles.keys())[0]
+        elif len(self.cycles) == 1:
+            k = list(self.cycles)[0]
             if self.cycles[k] != 1:
                 return f'{self.cycles[k]} * C({k})'
             else:
                 return f'C({k})'
         else:
             return ' + '.join(repr(self.cycles[k] * C(k))
-                for k in reversed(sorted(self.cycles.keys())))
+                for k in reversed(sorted(self.cycles)))
 
     def normalize(self):
-        for k in list(self.cycles.keys()):
+        for k in list(self.cycles):
             if self.cycles[k] == 0:
                 del self.cycles[k]
 
@@ -59,7 +59,7 @@ class C:
             other = tmp
             other.normalize()
         p = C()
-        for k, h in product(self.cycles.keys(), other.cycles.keys()):
+        for k, h in product(self.cycles, other.cycles):
             p.cycles[lcm(k, h)] += self.cycles[k] * other.cycles[h] * gcd(k, h)
         p.normalize()
         return p
@@ -77,7 +77,7 @@ class C:
         return self.cycles == other.cycles
 
     def __le__(self, other):
-        for k in self.cycles.keys():
+        for k in self.cycles:
             if not self.cycles[k] <= other.cycles[k]:
                 return False
         return True
