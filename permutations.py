@@ -3,6 +3,7 @@ from collections import defaultdict
 from itertools import product, count
 from functools import total_ordering
 from copy import copy
+from sys import stderr
 
 
 @total_ordering
@@ -70,12 +71,14 @@ class C:
         return self.__mul__(other)
 
     def __pow__(self, n):
-        r = 1
+        r = C(1)
         for i in range(n):
             r = r * self
         return r
 
     def __eq__(self, other):
+        if isinstance(other, int):
+            other = other * C(1)
         return self.cycles == other.cycles
 
     def __le__(self, other):
@@ -83,6 +86,15 @@ class C:
             if not self.cycles[n] <= other.cycles[n]:
                 return False
         return True
+
+    def __len__(self):
+        return sum(n * self.cycles[n] for n in self.cycles)
+
+    def coeff(self, n):
+        return self.cycles[n]
+
+    def lengths(self):
+        return sorted(self.cycles.keys())
 
 
 class Poly:
@@ -96,3 +108,51 @@ class Poly:
         for i in range(n):
             res = res * val + self.coeff[i]
         return res
+
+    def __repr__(self):
+        return f'Poly{self.coeff}'
+
+
+def minimal_poly(elem, degree):
+    for n in count(0):
+        print(f'{n = }', file=stderr)
+        for coeff in product(range(-n + 1, n), repeat=degree):
+            P = Poly(1, *coeff)
+            if P(elem) == 0:
+                return P
+
+
+def linear_combination(elem, degree):
+    n = list(sorted(elem.cycles))[0]
+    bound = (n * elem.cycles[n])**(degree - 1)
+    for n in range(bound + 1):
+        print(f'{n = }', file=stderr)
+        for coeff in product(range(-n + 1, 1), repeat=degree):
+            P = Poly(1, *coeff)
+            if P(elem) == 0:
+                return P
+
+
+# Minimal polynomial of a given degree
+
+import numpy as np
+from scipy.optimize import milp, Bounds, LinearConstraint
+
+def minimal_poly(elem, deg):
+    rows = (elem**deg).lengths()[-1] + 1
+    A = np.zeros((rows + 1, deg + 1))
+    for i in range(rows):
+        for j in range(deg + 1):
+            A[i][j] = (elem**j).coeff(i)
+    A[rows][-1] = 1
+    L = np.zeros(rows + 1)
+    U = np.zeros(rows + 1)
+    L[-1] = 1
+    U[-1] = np.inf
+    constraints = LinearConstraint(A, L, U)
+    c = np.zeros(deg + 1)
+    integrality = np.ones(deg + 1)
+    res = milp(c=c, bounds=Bounds(),
+               constraints=constraints,
+               integrality=integrality)
+    return Poly(*(int(n) for n in reversed(res.x)))
