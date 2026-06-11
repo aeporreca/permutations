@@ -141,3 +141,27 @@ def minimal_poly(elem):
                    integrality=integrality)
         if res.x is not None:
             return Poly(*(int(n) for n in reversed(res.x)))
+
+from sympy import Matrix
+
+def minimal_poly_nullspace(elem):
+    if isinstance(elem, int):
+        elem = elem * C(1)
+    for deg in count(1):
+        lengths_values = (elem**deg).lengths()
+        # print(lengths_values)
+        rows = len(lengths_values)
+        A = np.zeros((rows, deg),dtype=int)
+        for j in range(1,deg+1):
+            potenza_j = elem**j
+            for i in range(rows):
+                # print(elem**j,(elem**j).coeff(lengths_values[i]))
+                A[i][j-1] = (potenza_j).coeff(lengths_values[i])
+
+        B = Matrix(A)
+        #print(B)
+        
+        solspace = B.nullspace()
+        
+        if solspace != []:
+            return [Poly(*[int(n) for n in reversed(sol)]+[0]) for sol in solspace]
