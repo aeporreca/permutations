@@ -147,21 +147,53 @@ from sympy import Matrix
 def minimal_poly_nullspace(elem):
     if isinstance(elem, int):
         elem = elem * C(1)
-    for deg in count(1):
+    for deg in count(0):
         lengths_values = (elem**deg).lengths()
         # print(lengths_values)
         rows = len(lengths_values)
-        A = np.zeros((rows, deg),dtype=int)
-        for j in range(1,deg+1):
+        # print(lengths_values)
+        A = np.zeros((rows, deg+1),dtype=int)
+        for j in range(0,deg+1):
             potenza_j = elem**j
             for i in range(rows):
                 # print(elem**j,(elem**j).coeff(lengths_values[i]))
-                A[i][j-1] = (potenza_j).coeff(lengths_values[i])
+                A[i][j] = (potenza_j).coeff(lengths_values[i])
 
         B = Matrix(A)
         #print(B)
         
         solspace = B.nullspace()
-        
-        if solspace != []:
-            return [Poly(*[int(n) for n in reversed(sol)]+[0]) for sol in solspace]
+
+        # print(solspace)
+        pols = [Poly(*[int(n) for n in reversed(sol)]) for sol in solspace if sol[-1]!=0 ]
+        if pols != []:
+            return pols
+
+def linear_combination(elem, deg):
+    rows = (elem**deg).lengths()[-1] +1 
+    A = np.zeros((rows, deg))
+    for i in range(rows):
+        for j in range(deg):
+            A[i][j] = (elem**j).coeff(i)
+    
+    L = np.zeros(rows)
+    U = np.zeros(rows)
+    for i in range(rows):
+       L[i] = (elem**deg).coeff(i)
+       U[i] = (elem**deg).coeff(i)
+    
+    constraints = LinearConstraint(A, L, U)
+    
+    # print(A,L,U)
+
+    c = np.zeros(deg)
+    integrality = np.ones(deg)
+    
+    res = milp(c=c, bounds=Bounds(lb=0),
+               constraints=constraints,
+               integrality=integrality)
+    # print(res)
+    if res.x is None:
+        # print(res)
+        return None
+    return Poly(*([-1]+[int(n) for n in reversed(res.x)]))
