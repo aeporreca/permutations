@@ -249,7 +249,7 @@ class Permutation:
     def multiplicity(self, length):
         return self._cycles[length]
 
-    def root(self, k=2):
+    def sqrt(self, k=2):
         res = Permutation.of(0)
         while len(res**k) < len(self):
             length = (self - res**k).lengths()[0]
@@ -260,7 +260,10 @@ class Permutation:
             
 
 def C(n):
-    return Permutation({n: 1})
+    if n == 0:
+        return Permutation()
+    else:
+        return Permutation({n: 1})
     # return Polynomial.of(Permutation({n: 1}))
 
 
