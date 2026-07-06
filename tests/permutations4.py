@@ -53,9 +53,6 @@ class Monomial:
             res *= value[var] ** self.exp[var]
         return res
 
-    def is_linear(self):
-        return sum(self.exp.values()) <= 1
-
 
 class Polynomial:
 
@@ -124,6 +121,9 @@ class Polynomial:
             res *= self
         return res
 
+    def vars(self):
+        return sorted({var for mono in self.coeff for var in mono.vars()})
+
     def __call__(self, *values):
         if len(values) != len(self.vars()):
             raise ValueError('wrong number of arguments')
@@ -136,15 +136,6 @@ class Polynomial:
     def __eq__(self, other):
         other = Polynomial.of(other)
         return self.coeff == other.coeff
-
-    def vars(self):
-        return sorted({var for mono in self.coeff for var in mono.vars()})
-
-    def is_linear(self):
-        return all(mono.is_linear() for mono in self.coeff)
-
-    def is_univariate(self):
-        return len(self.vars()) <= 1
 
 
 class Permutation:
