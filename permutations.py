@@ -164,7 +164,10 @@ class Permutation:
         if isinstance(x, Permutation):
             return x
         elif isinstance(x, int):
-            return Permutation({1: x})
+            if x != 0:
+                return Permutation({1: x})
+            else:
+                return Permutation()
         else:
             return NotImplemented
 
@@ -185,6 +188,10 @@ class Permutation:
 
     def __hash__(self):
         return hash(self._cycles)
+
+    def __len__(self):
+        return sum(mult * length
+                   for mult, length in self._cycles.items())
 
     def __add__(self, other):
         other = Permutation.of(other)
@@ -236,12 +243,21 @@ class Permutation:
     def cycles(self):
         return frozenset(C(n) for n in self._cycles)
 
-    def cycle_lengths(self):
-        return list(self._cycles.keys())
+    def lengths(self):
+        return sorted(self._cycles.keys())
 
     def multiplicity(self, length):
         return self._cycles[length]
-        
+
+    def root(self, k=2):
+        res = Permutation.of(0)
+        while len(res**k) < len(self):
+            length = (self - res**k).lengths()[0]
+            res += C(length)
+        if res**k != self:
+            return None
+        return res
+            
 
 def C(n):
     return Permutation({n: 1})
@@ -272,7 +288,7 @@ def divisors_of_cycles(perms):
         Permutation.of(perm).cycles() for perm in perms))
     divs = cycles.copy()
     for cycle in cycles:
-        divs |= {C(n) for n in prime_power_factors(cycle.cycle_lengths()[0])}
+        divs |= {C(n) for n in prime_power_factors(cycle.lengths()[0])}
     return divs
 
 
@@ -296,11 +312,11 @@ def extract_terms_with_cycle(P, cycle):
     cycle = Permutation.of(cycle)
     if len(cycle.cycles()) != 1:
         raise ValueError(f'{cycle} is not a cycle')
-    length = cycle.cycle_lengths()[0]
+    length = cycle.lengths()[0]
     res = 0
     for mono, coeff in P.terms().items():
         coeff = Permutation.of(coeff)
-        if length in coeff.cycle_lengths():
+        if length in coeff.lengths():
             res += coeff.multiplicity(length) * Polynomial.of(mono)
     return res
 
