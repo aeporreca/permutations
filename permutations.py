@@ -1,8 +1,9 @@
 from frozendict import frozendict
-from itertools import product
+from itertools import product, chain, combinations, repeat
+from functools import total_ordering
 from copy import deepcopy
 from collections import defaultdict
-from math import gcd, lcm
+from math import gcd, lcm, prod
 
 
 class Monomial:
@@ -66,6 +67,8 @@ class Polynomial:
     def of(x):
         if isinstance(x, Polynomial):
             return x
+        elif isinstance(x, Monomial):
+            return Polynomial({x: 1})
         else:
             return Polynomial({Monomial(): x})
 
@@ -119,10 +122,7 @@ class Polynomial:
         return self * other
 
     def __pow__(self, exp):
-        res = 1
-        for _ in range(exp):
-            res *= self
-        return res
+        return prod(repeat(self, exp))
 
     def __call__(self, *values):
         if len(values) != len(self.vars()):
@@ -146,39 +146,53 @@ class Polynomial:
     def is_univariate(self):
         return len(self.vars()) <= 1
 
+    def coefficients(self):
+        return set(self.coeff.values())
 
+    def terms(self):
+        return self.coeff
+
+
+@total_ordering
 class Permutation:
 
     def __init__(self, cycles={}):
-        self.cycles = frozendict(cycles)
+        self._cycles = frozendict(cycles)
 
     @staticmethod
     def of(x):
         if isinstance(x, Permutation):
             return x
-        else:
+        elif isinstance(x, int):
             return Permutation({1: x})
+        else:
+            return NotImplemented
 
     def __repr__(self):
-        if not self.cycles:
+        if not self._cycles:
             return '0'
-        elif list(self.cycles) == [1]:
-            return repr(self.cycles[1])
-        elif len(self.cycles) == 1:
-            n = list(self.cycles)[0]
-            if self.cycles[n] != 1:
-                return f'{self.cycles[n]}*C({n})'
+        elif list(self._cycles) == [1]:
+            return repr(self._cycles[1])
+        elif len(self._cycles) == 1:
+            n = list(self._cycles)[0]
+            if self._cycles[n] != 1:
+                return f'{self._cycles[n]}*C({n})'
             else:
                 return f'C({n})'
         else:
-            return ' + '.join(repr(self.cycles[n] * Permutation({n: 1}))
-                for n in reversed(sorted(self.cycles)))
+            return ' + '.join(repr(self._cycles[n] * Permutation({n: 1}))
+                for n in reversed(sorted(self._cycles)))
+
+    def __hash__(self):
+        return hash(self._cycles)
 
     def __add__(self, other):
         other = Permutation.of(other)
-        cycles = defaultdict(int, deepcopy(self.cycles))
-        for n in other.cycles:
-            cycles[n] += other.cycles[n]
+        if other is NotImplemented:
+            return NotImplemented
+        cycles = defaultdict(int, deepcopy(self._cycles))
+        for n in other._cycles:
+            cycles[n] += other._cycles[n]
             if cycles[n] == 0:
                 del cycles[n]
         return Permutation(cycles)
@@ -194,62 +208,138 @@ class Permutation:
 
     def __mul__(self, other):
         other = Permutation.of(other)
+        if other is NotImplemented:
+            return NotImplemented
         cycles = defaultdict(int)
-        for m, n in product(self.cycles, other.cycles):
-            cycles[lcm(m, n)] +=  self.cycles[m] * other.cycles[n] * gcd(m, n)
+        for m, n in product(self._cycles, other._cycles):
+            cycles[lcm(m, n)] += (self._cycles[m] *
+                                  other._cycles[n] * gcd(m, n))
         return Permutation(cycles)
 
     def __rmul__(self, other):
         return self * other
 
+    def __pow__(self, exp):
+        return prod(repeat(self, exp))
+
     def __eq__(self, other):
         other = Permutation.of(other)
-        return self.cycles == other.cycles
+        return self._cycles == other._cycles
 
     def __le__(self, other):
         other = Permutation.of(other)
-        return all(self.cycles[length] <= other.cycles.get(length, 0)
-                   for length in self.cycles)
+        cycles = sorted(self._cycles | other._cycles)
+        mults1 = [self._cycles.get(length, 0) for length in cycles]
+        mults2 = [other._cycles.get(length, 0) for length in cycles]
+        return mults1 >= mults2
+
+    def cycles(self):
+        return frozenset(C(n) for n in self._cycles)
+
+    def cycle_lengths(self):
+        return list(self._cycles.keys())
+
+    def multiplicity(self, length):
+        return self._cycles[length]
         
 
 def C(n):
-    return Polynomial.of(Permutation({n: 1}))
+    return Permutation({n: 1})
+    # return Polynomial.of(Permutation({n: 1}))
 
 
-# def extract_terms_with_cycle_of_length(P, length):
-#     coeffs = {}
-#     for mono in P.coeff:
-#         coeff = Permutation.of(P.coeff[mono])
-#         if length in coeff.cycles:
-#             coeffs[mono] = coeff.cycles[length]
-#     return Polynomial(coeffs)
+def powerset(iterable):
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 
-def coefficient_of_vector(P, cycle):
+def prime_power_factors(n):
+    divisors = [1]
+    for d in range(2, n + 1):
+        e = 1
+        while n % (e * d) == 0:
+            e = e * d
+        if e != 1:
+            divisors.append(e)
+        n = n // e
+        if n == 1:
+            break
+    return divisors
+
+
+def divisors_of_cycles(perms):
+    cycles = set(chain.from_iterable(
+        Permutation.of(perm).cycles() for perm in perms))
+    divs = cycles.copy()
+    for cycle in cycles:
+        divs |= {C(n) for n in prime_power_factors(cycle.cycle_lengths()[0])}
+    return divs
+
+
+class NatExt:
+
+    def __init__(self, perms):
+        cycles = chain.from_iterable(perm.cycles() for perm in perms)
+        self.generators = frozenset(cycles)
+
+    def __repr__(self):
+        return f'NatExt({set(self.generators)})'
+
+    def basis(self):
+        return set(chain.from_iterable(
+            Permutation.of(prod(X)).cycles()
+            for X in powerset(self.generators)))
+
+
+def extract_terms_with_cycle_of_length(P, cycle):
+    P = Polynomial.of(P)
     cycle = Permutation.of(cycle)
-    # only works when the vector is a cycle
-    assert (len(cycle.cycles) == 1 and
-            list(cycle.cycles.values()) == [1])
-    length = list(cycle.cycles.keys())[0]
-    return Polynomial({mono: Permutation.of(coeff).cycles[length]
-                       for mono, coeff in P.coeff.items()
-                       if cycle <= Permutation.of(coeff)})
-    
-
-# def cycle(n):
-#     return Permutation({n: 1})
+    if len(cycle.cycles()) != 1:
+        raise ValueError(f'{cycle} is not a cycle')
+    length = cycle.cycle_lengths()[0]
+    res = 0
+    for mono, coeff in P.terms().items():
+        coeff = Permutation.of(coeff)
+        if length in coeff.cycle_lengths():
+            res += coeff.multiplicity(length) * Polynomial.of(mono)
+    return res
 
 
-def var(name):
+def variable(name):
     mono = Monomial({name: 1})
     return Polynomial({mono: 1})
 
 
-X = var('X')
-Y = var('Y')
-Z = var('Z')
+def construct_equation_system(P, Q):
+    P = Polynomial.of(P)
+    Q = Polynomial.of(Q)
+    # if not P.is_linear():
+    #     raise ValueError(f'{P} is not linear')
+    # if not Q.is_linear():
+    #     raise ValueError(f'{Q} is not linear')
+    D = divisors_of_cycles(P.coefficients() | Q.coefficients())
+    E = NatExt(D)
+    B = list(E.basis())
+    vars = set(P.vars() + Q.vars())
+    V = {(var, cycle): variable(f'V[{var},{cycle}]')
+         for var in vars for cycle in B}
+    W = {var: sum(cycle * V[var,cycle] for cycle in B)
+         for var in vars}
+    P1 = P(*(W[var] for var in P.vars()))
+    Q1 = Q(*(W[var] for var in Q.vars()))
+    equations = []
+    for cycle in B:
+        P2 = extract_terms_with_cycle_of_length(P1, cycle)
+        Q2 = extract_terms_with_cycle_of_length(Q1, cycle)
+        equations.append((P2, Q2))
+    return equations
 
-x1 = var('x1')
-x2 = var('x2')
-x3 = var('x3')
-x6 = var('x6')
+
+X = variable('X')
+Y = variable('Y')
+Z = variable('Z')
+
+x1 = variable('x1')
+x2 = variable('x2')
+x3 = variable('x3')
+x6 = variable('x6')
