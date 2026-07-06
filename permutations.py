@@ -126,7 +126,7 @@ class Polynomial:
 
     def __call__(self, *values):
         if len(values) != len(self.vars()):
-            raise ValueError('wrong number of arguments')
+            raise TypeError('wrong number of arguments')
         values = {var: value for var, value in zip(self.vars(), values)}
         res = 0
         for mono in self.coeff:
