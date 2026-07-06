@@ -276,14 +276,14 @@ def divisors_of_cycles(perms):
     return divs
 
 
-class NatExt:
+class NaturalExtension:
 
     def __init__(self, perms):
         cycles = chain.from_iterable(perm.cycles() for perm in perms)
         self.generators = frozenset(cycles)
 
     def __repr__(self):
-        return f'NatExt({set(self.generators)})'
+        return f'NaturalExtension({set(self.generators)})'
 
     def basis(self):
         return set(chain.from_iterable(
@@ -291,7 +291,7 @@ class NatExt:
             for X in powerset(self.generators)))
 
 
-def extract_terms_with_cycle_of_length(P, cycle):
+def extract_terms_with_cycle(P, cycle):
     P = Polynomial.of(P)
     cycle = Permutation.of(cycle)
     if len(cycle.cycles()) != 1:
@@ -327,12 +327,17 @@ class Equation:
                 self.Q.is_univariate() and
                 self.P.vars() == self.Q.vars())
 
+    def solve(self):
+        if not self.is_linear():
+            raise NotImplementedError(
+                'unable to solve nonlinear equations')
+
 
 def construct_equation_system(P, Q):
     P = Polynomial.of(P)
     Q = Polynomial.of(Q)
     D = divisors_of_cycles(P.coefficients() | Q.coefficients())
-    E = NatExt(D)
+    E = NaturalExtension(D)
     B = list(E.basis())
     vars = set(P.vars() + Q.vars())
     V = {(var, cycle): variable(f'V[{var},{cycle}]')
@@ -343,8 +348,8 @@ def construct_equation_system(P, Q):
     Q1 = Q(*(W[var] for var in Q.vars()))
     equations = set()
     for cycle in B:
-        P2 = extract_terms_with_cycle_of_length(P1, cycle)
-        Q2 = extract_terms_with_cycle_of_length(Q1, cycle)
+        P2 = extract_terms_with_cycle(P1, cycle)
+        Q2 = extract_terms_with_cycle(Q1, cycle)
         equations.add((P2, Q2))
     return equations
 
