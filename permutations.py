@@ -310,13 +310,27 @@ def variable(name):
     return Polynomial({mono: 1})
 
 
+class Equation:
+
+    def __init__(self, P, Q):
+        self.P = Polynomial.of(P)
+        self.Q = Polynomial.of(Q)
+
+    def __repr__(self):
+        return f'Equation({self.P}, {self.Q})'
+
+    def is_linear(self):
+        return self.P.is_linear() and self.Q.is_linear()
+
+    def is_univariate(self):
+        return (self.P.is_univariate() and
+                self.Q.is_univariate() and
+                self.P.vars() == self.Q.vars())
+
+
 def construct_equation_system(P, Q):
     P = Polynomial.of(P)
     Q = Polynomial.of(Q)
-    # if not P.is_linear():
-    #     raise ValueError(f'{P} is not linear')
-    # if not Q.is_linear():
-    #     raise ValueError(f'{Q} is not linear')
     D = divisors_of_cycles(P.coefficients() | Q.coefficients())
     E = NatExt(D)
     B = list(E.basis())
@@ -327,11 +341,11 @@ def construct_equation_system(P, Q):
          for var in vars}
     P1 = P(*(W[var] for var in P.vars()))
     Q1 = Q(*(W[var] for var in Q.vars()))
-    equations = []
+    equations = set()
     for cycle in B:
         P2 = extract_terms_with_cycle_of_length(P1, cycle)
         Q2 = extract_terms_with_cycle_of_length(Q1, cycle)
-        equations.append((P2, Q2))
+        equations.add((P2, Q2))
     return equations
 
 
