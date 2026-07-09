@@ -1,11 +1,12 @@
 from frozendict import frozendict
-from itertools import product, chain, combinations, repeat
+from itertools import product, chain, combinations, repeat, count
 from functools import total_ordering
 from copy import deepcopy
 from collections import defaultdict
 from math import gcd, lcm, prod
 import numpy as np
 from scipy.optimize import milp, LinearConstraint
+
 
 class Monomial:
 
@@ -49,14 +50,18 @@ class Monomial:
     def vars(self):
         return sorted(self.exp.keys())
 
-    def eval(self, value):
+    def eval(self, values):
         res = 1
         for var in self.exp:
-            res *= value[var] ** self.exp[var]
+            # res *= values[var] ** self.exp[var]
+            res *= values.get(var, variable(var)) ** self.exp[var]
         return res
 
+    def degree(self):
+        return sum(self.exp.values())
+
     def is_linear(self):
-        return sum(self.exp.values()) <= 1
+        return self.degree() <= 1
 
 
 class Polynomial:
@@ -71,7 +76,10 @@ class Polynomial:
         elif isinstance(x, Monomial):
             return Polynomial({x: 1})
         else:
-            return Polynomial({Monomial(): x})
+            if x != 0:
+                return Polynomial({Monomial(): x})
+            else:
+                return Polynomial()
 
     def as_monomial(self):
         error = ValueError(f'{self} is not a monomial')
@@ -135,10 +143,18 @@ class Polynomial:
     def __pow__(self, exp):
         return prod(repeat(self, exp))
 
-    def __call__(self, *values):
-        if len(values) != len(self.vars()):
-            raise TypeError('wrong number of arguments')
-        values = {var: value for var, value in zip(self.vars(), values)}
+    def __call__(self, *values, **kwargs):
+        error = TypeError('wrong arguments')
+        if values and kwargs:
+            raise error
+        if values:
+            if len(values) != len(self.vars()):
+                raise error
+            values = {var: value for var, value in zip(self.vars(), values)}
+        else:
+            # if not set(self.vars()) <= kwargs.keys():
+            #     raise error
+            values = kwargs
         res = 0
         for mono in self.coeff:
             res += self.coeff[mono] * mono.eval(values)
@@ -149,7 +165,8 @@ class Polynomial:
         return self.coeff == other.coeff
 
     def vars(self):
-        return sorted({var for mono in self.coeff for var in mono.vars()})
+        return sorted({var for mono in self.coeff
+                       for var in mono.vars()})
 
     def is_linear(self):
         return all(mono.is_linear() for mono in self.coeff)
@@ -170,12 +187,33 @@ class Polynomial:
             mono = Monomial.of(mono)
         return self.coeff.get(mono, 0)
 
+    def homomorphism(self, hom):
+        return Polynomial({mono: hom(coeff)
+                           for mono, coeff in self.coeff.items()})
+
+    def minimal_degree(self):
+        return min(mono.degree() for mono in self.coeff)
+
+
+def partitions(n, m=1):
+    if n == 0:
+        yield ()
+    else:
+        for k in range(m, n + 1):
+            for p in partitions(n - k, k):
+                yield (k,) + p
+
 
 @total_ordering
 class Permutation:
 
     def __init__(self, cycles={}):
         self._cycles = frozendict(cycles)
+
+    @staticmethod
+    def generate(size):
+        for p in partitions(size):
+            yield sum(C(n) for n in p)
 
     @staticmethod
     def of(x):
@@ -364,9 +402,7 @@ class Equation:
         return self.P.is_linear() and self.Q.is_linear()
 
     def is_univariate(self):
-        return (self.P.is_univariate() and
-                self.Q.is_univariate() and
-                self.P.vars() == self.Q.vars())
+        return len(set(self.P.vars() + self.Q.vars())) <= 1
 
     def vars(self):
         return sorted(set(self.P.vars() + self.Q.vars()))
@@ -409,24 +445,112 @@ class Equation:
         A, b = self.as_matrix_equation()
         dim, nvars = A.shape
         constraints = LinearConstraint(A, b, b)
-        c = np.zeros(nvars, dtype=int)
+        objective = np.zeros(nvars, dtype=int) # trivial
         integrality = np.ones(nvars, dtype=int)
-        res = milp(c=c, constraints=constraints,
+        res = milp(c=objective,
+                   constraints=constraints,
                    integrality=integrality)
         if res.x is None:
             return None
         vars = self.vars()
         x = np.array(res.x, dtype=int)
-        return {vars[i]: x[i*dim:(i+1)*dim] @ self.B
-                for i in range(len(self.vars()))}
+        sol = {vars[i]: x[i*dim:(i+1)*dim] @ self.B
+               for i in range(len(self.vars()))}
+        assert self.P(**sol) == self.Q(**sol)
+        yield sol
 
-    def solve(self):
-        if not self.is_linear():
-            raise NotImplementedError(
-                'unable to solve nonlinear equations')
-        return self.solve_linear()
+    # def solutions_univariate(self):
+    #     equations = self.as_natural_equations()
+    #     V = self.natural_variables()
+    #     var = self.vars()[0]
+    #     P = sum(cycle * V[var,cycle] for cycle in self.B)
+    #     for sol in solutions_univariate_system(equations):
+    #         assert self.P(P(**sol)) == self.Q(P(**sol))
+    #         yield P(**sol)
+
+    def solutions_univariate(self):
+        if not self.is_univariate():
+            raise ValueError(f'{self} is not univariate')
+        P = self.P.homomorphism(card)
+        Q = self.Q.homomorphism(card)
+        var = P.vars()[0]
+        for size in solutions_natural_univariate_equation(P, Q):
+            for perm in Permutation.generate(size):
+                if self.P(**{var: perm}) == self.Q(**{var: perm}):
+                    yield {var: perm}
+
+    # def solve(self):
+    #     if self.is_univariate():
+    #         return self.solve_univariate()
+    #     elif self.is_linear():
+    #         return self.solve_linear()
+    #     raise NotImplementedError(
+    #         f'unable to solve {self}')
+
+
+def card(p):
+    if isinstance(p, int):
+        return p
+    elif isinstance(p, Permutation):
+        return len(p)
+
+
+def divisors(n):
+    for d in range(1, n + 1):
+        if n % d == 0:
+            yield d
+    
+
+def solutions_natural_univariate_equation(P, Q):
+    R = P - Q
+    if R == 0:
+        yield from count(0)
+    a = R.coeff_of(1)
+    if a == 0:
+        yield 0
+        var = R.vars()[0]
+        tmp = {}
+        k = R.minimal_degree()
+        for mono, coeff in R.coeff.items():
+            if mono.exp[var] > k:
+                tmp[Monomial({var: mono.exp[var] - k})] = coeff
+            else:
+                tmp[Monomial()] = coeff
+        S = Polynomial(tmp)
+        yield from solutions_natural_univariate_equation(S, 0)
+    else:
+        for d in divisors(abs(a)):
+            if R(d) == 0:
+                yield d
+
+
+def solutions_natural_univariate_system(equations):
+    if not equations:
+        yield {}
+    else:
+        P, Q = equations[0]
+        vars = sorted(set(P.vars() + Q.vars()))
+        if not vars:
+            raise ValueError(f'underdetermined system {equations}')
+        var = vars[0]
+        for x in solutions_natural_univariate_equation(P, Q):
+            equations2 = [(Polynomial.of(P1(**{var: x})),
+                           Polynomial.of(Q1(**{var: x})))
+                        for P1, Q1 in equations[1:]]
+            for sol in solutions_natural_univariate_system(equations2):
+                yield sol | {var: x}
 
 
 X = variable('X')
 Y = variable('Y')
 Z = variable('Z')
+
+# Minimal poly of C(2) + C(3) + C(5)
+
+P = (np.array([1, -35, 487, -3425, 12736, -23540, 16800, 0]) @
+     [X**i for i in reversed(range(8))])
+
+# Minimal poly of C(2) + C(3) + C(7)
+
+P = (np.array([1, -48, 946, -9864, 58345, -194136, 333540, -226800, 0]) @
+     [X**i for i in reversed(range(9))])
