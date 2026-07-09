@@ -426,11 +426,7 @@ class Equation:
                 'unable to solve nonlinear equations')
         return self.solve_linear()
 
+
 X = variable('X')
 Y = variable('Y')
 Z = variable('Z')
-
-x1 = variable('x1')
-x2 = variable('x2')
-x3 = variable('x3')
-x6 = variable('x6')
