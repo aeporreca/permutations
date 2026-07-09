@@ -477,7 +477,7 @@ class Equation:
         for size in solutions_natural_univariate_equation(P, Q):
             for perm in Permutation.generate(size):
                 if self.P(**{var: perm}) == self.Q(**{var: perm}):
-                    yield {var: perm}
+                    yield perm
 
     # def solve(self):
     #     if self.is_univariate():
@@ -547,10 +547,10 @@ Z = variable('Z')
 
 # Minimal poly of C(2) + C(3) + C(5)
 
-P = (np.array([1, -35, 487, -3425, 12736, -23540, 16800, 0]) @
-     [X**i for i in reversed(range(8))])
+P_2_3_5 = (np.array([1, -35, 487, -3425, 12736, -23540, 16800, 0]) @
+           [X**i for i in reversed(range(8))])
 
 # Minimal poly of C(2) + C(3) + C(7)
 
-P = (np.array([1, -48, 946, -9864, 58345, -194136, 333540, -226800, 0]) @
-     [X**i for i in reversed(range(9))])
+P_2_3_7 = (np.array([1, -48, 946, -9864, 58345, -194136, 333540, -226800, 0]) @
+           [X**i for i in reversed(range(9))])
