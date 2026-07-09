@@ -4,7 +4,8 @@ from functools import total_ordering
 from copy import deepcopy
 from collections import defaultdict
 from math import gcd, lcm, prod
-
+import numpy as np
+from scipy.optimize import milp, LinearConstraint
 
 class Monomial:
 
@@ -72,6 +73,15 @@ class Polynomial:
         else:
             return Polynomial({Monomial(): x})
 
+    def as_monomial(self):
+        error = ValueError(f'{self} is not a monomial')
+        if len(self.coeff) != 1:
+            raise error
+        mono, coeff = list(self.coeff.items())[0]
+        if coeff != 1:
+            raise error
+        return mono
+
     def __hash__(self):
         return hash(self.coeff)
 
@@ -84,6 +94,7 @@ class Polynomial:
                 reprs.append(repr(coeff))
             elif coeff == 1:
                 reprs.append(repr(mono))
+            # TODO: correct this printing stuff
             # elif len(coeff.cycles) > 1:
             #     reprs.append(f'({repr(coeff)})*{repr(mono)}')
             else:
@@ -151,6 +162,13 @@ class Polynomial:
 
     def terms(self):
         return self.coeff
+
+    def coeff_of(self, mono):
+        if isinstance(mono, Polynomial):
+            mono = mono.as_monomial()
+        elif isinstance(mono, int):
+            mono = Monomial.of(mono)
+        return self.coeff.get(mono, 0)
 
 
 @total_ordering
@@ -247,7 +265,7 @@ class Permutation:
         return sorted(self._cycles.keys())
 
     def multiplicity(self, length):
-        return self._cycles[length]
+        return self._cycles.get(length, 0)
 
     def sqrt(self, k=2):
         res = Permutation.of(0)
@@ -257,7 +275,7 @@ class Permutation:
         if res**k != self:
             return None
         return res
-            
+
 
 def C(n):
     if n == 0:
@@ -334,6 +352,10 @@ class Equation:
     def __init__(self, P, Q):
         self.P = Polynomial.of(P)
         self.Q = Polynomial.of(Q)
+        D = divisors_of_cycles(self.P.coefficients() |
+                               self.Q.coefficients())
+        E = NaturalExtension(D)
+        self.B = sorted(E.basis())
 
     def __repr__(self):
         return f'Equation({self.P}, {self.Q})'
@@ -346,32 +368,63 @@ class Equation:
                 self.Q.is_univariate() and
                 self.P.vars() == self.Q.vars())
 
+    def vars(self):
+        return sorted(set(self.P.vars() + self.Q.vars()))
+
+    def natural_variables(self):
+        vars = self.vars()
+        return {(var, cycle): variable(f'V[{var},{cycle}]')
+                for var in vars for cycle in self.B}
+
+    def as_natural_equations(self):
+        V = self.natural_variables()
+        W = {var: sum(cycle * V[var,cycle] for cycle in self.B)
+             for var in self.vars()}
+        P1 = self.P(*(W[var] for var in self.P.vars()))
+        Q1 = self.Q(*(W[var] for var in self.Q.vars()))
+        equations = []
+        for cycle in self.B:
+            P2 = extract_terms_with_cycle(P1, cycle)
+            Q2 = extract_terms_with_cycle(Q1, cycle)
+            equations.append((Polynomial.of(P2), Polynomial.of(Q2)))
+        return equations
+
+    def as_matrix_equation(self):
+        dim = len(self.B)
+        nvars = len(self.vars())
+        A = np.zeros((dim, dim * nvars), dtype=int)
+        a = np.zeros(dim, dtype=int)
+        B = np.zeros((dim, dim * nvars), dtype=int)
+        b = np.zeros(dim, dtype=int)
+        V = self.natural_variables()
+        for i, (P, Q) in enumerate(self.as_natural_equations()):
+            for j, var in enumerate(self.natural_variables()):
+                A[i][j] = P.coeff_of(V[var])
+                B[i][j] = Q.coeff_of(V[var])
+            a[i] = P.coeff_of(1)
+            b[i] = Q.coeff_of(1)
+        return A - B, b - a
+
+    def solve_linear(self):
+        A, b = self.as_matrix_equation()
+        dim, nvars = A.shape
+        constraints = LinearConstraint(A, b, b)
+        c = np.zeros(nvars, dtype=int)
+        integrality = np.ones(nvars, dtype=int)
+        res = milp(c=c, constraints=constraints,
+                   integrality=integrality)
+        if res.x is None:
+            return None
+        vars = self.vars()
+        x = np.array(res.x, dtype=int)
+        return {vars[i]: x[i*dim:(i+1)*dim] @ self.B
+                for i in range(len(self.vars()))}
+
     def solve(self):
         if not self.is_linear():
             raise NotImplementedError(
                 'unable to solve nonlinear equations')
-
-
-def construct_equation_system(P, Q):
-    P = Polynomial.of(P)
-    Q = Polynomial.of(Q)
-    D = divisors_of_cycles(P.coefficients() | Q.coefficients())
-    E = NaturalExtension(D)
-    B = list(E.basis())
-    vars = set(P.vars() + Q.vars())
-    V = {(var, cycle): variable(f'V[{var},{cycle}]')
-         for var in vars for cycle in B}
-    W = {var: sum(cycle * V[var,cycle] for cycle in B)
-         for var in vars}
-    P1 = P(*(W[var] for var in P.vars()))
-    Q1 = Q(*(W[var] for var in Q.vars()))
-    equations = set()
-    for cycle in B:
-        P2 = extract_terms_with_cycle(P1, cycle)
-        Q2 = extract_terms_with_cycle(Q1, cycle)
-        equations.add((P2, Q2))
-    return equations
-
+        return self.solve_linear()
 
 X = variable('X')
 Y = variable('Y')
