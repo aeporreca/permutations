@@ -6,6 +6,7 @@ from collections import defaultdict
 from math import gcd, lcm, prod
 import numpy as np
 from scipy.optimize import milp, LinearConstraint
+from sympy import Matrix
 
 
 class Monomial:
@@ -53,7 +54,6 @@ class Monomial:
     def eval(self, values):
         res = 1
         for var in self.exp:
-            # res *= values[var] ** self.exp[var]
             res *= values.get(var, variable(var)) ** self.exp[var]
         return res
 
@@ -152,8 +152,6 @@ class Polynomial:
                 raise error
             values = {var: value for var, value in zip(self.vars(), values)}
         else:
-            # if not set(self.vars()) <= kwargs.keys():
-            #     raise error
             values = kwargs
         res = 0
         for mono in self.coeff:
@@ -193,6 +191,20 @@ class Polynomial:
 
     def minimal_degree(self):
         return min(mono.degree() for mono in self.coeff)
+
+    @staticmethod
+    def terms_with_cycle(P, cycle):
+        P = Polynomial.of(P)
+        cycle = Permutation.of(cycle)
+        if len(cycle.cycles()) != 1:
+            raise ValueError(f'{cycle} is not a cycle')
+        length = cycle.lengths()[0]
+        res = 0
+        for mono, coeff in P.terms().items():
+            coeff = Permutation.of(coeff)
+            if length in coeff.lengths():
+                res += coeff.multiplicity(length) * Polynomial.of(mono)
+        return res
 
 
 def partitions(n, m=1):
@@ -314,13 +326,33 @@ class Permutation:
             return None
         return res
 
+    def minimal_equation(self):
+        for deg in count(1):
+            E = NaturalExtension(self.cycles())
+            B = sorted(E.basis())
+            dim = len(B)
+            nvars = deg + 1
+            A = Matrix.zeros(dim, nvars, dtype=int)
+            for j in range(nvars):
+                powA = Permutation.of(self**j)
+                for i in range(dim):
+                    A[i, j] = powA.multiplicity(len(B[i]))
+            sol = A.nullspace()
+            assert len(sol) <= 1
+            if not sol:
+                continue
+            a = list(map(int, sol[0]))
+            P = sum(a[i]*X**i for i in range(deg + 1) if a[i] > 0)
+            Q = sum(-a[i]*X**i for i in range(deg + 1) if a[i] < 0)
+            assert P(self) == Q(self)
+            return Equation(P, Q)
+
 
 def C(n):
     if n == 0:
         return Permutation()
     else:
         return Permutation({n: 1})
-    # return Polynomial.of(Permutation({n: 1}))
 
 
 def powerset(iterable):
@@ -366,20 +398,6 @@ class NaturalExtension:
             for X in powerset(self.generators)))
 
 
-def extract_terms_with_cycle(P, cycle):
-    P = Polynomial.of(P)
-    cycle = Permutation.of(cycle)
-    if len(cycle.cycles()) != 1:
-        raise ValueError(f'{cycle} is not a cycle')
-    length = cycle.lengths()[0]
-    res = 0
-    for mono, coeff in P.terms().items():
-        coeff = Permutation.of(coeff)
-        if length in coeff.lengths():
-            res += coeff.multiplicity(length) * Polynomial.of(mono)
-    return res
-
-
 def variable(name):
     mono = Monomial({name: 1})
     return Polynomial({mono: 1})
@@ -420,8 +438,8 @@ class Equation:
         Q1 = self.Q(*(W[var] for var in self.Q.vars()))
         equations = []
         for cycle in self.B:
-            P2 = extract_terms_with_cycle(P1, cycle)
-            Q2 = extract_terms_with_cycle(Q1, cycle)
+            P2 = Polynomial.terms_with_cycle(P1, cycle)
+            Q2 = Polynomial.terms_with_cycle(Q1, cycle)
             equations.append((Polynomial.of(P2), Polynomial.of(Q2)))
         return equations
 
@@ -458,15 +476,6 @@ class Equation:
                for i in range(len(self.vars()))}
         assert self.P(**sol) == self.Q(**sol)
         yield sol
-
-    # def solutions_univariate(self):
-    #     equations = self.as_natural_equations()
-    #     V = self.natural_variables()
-    #     var = self.vars()[0]
-    #     P = sum(cycle * V[var,cycle] for cycle in self.B)
-    #     for sol in solutions_univariate_system(equations):
-    #         assert self.P(P(**sol)) == self.Q(P(**sol))
-    #         yield P(**sol)
 
     def solutions_univariate(self):
         if not self.is_univariate():
@@ -558,3 +567,13 @@ P_2_3_7 = (np.array([1, -48, 946, -9864, 58345, -194136, 333540, -226800, 0]) @
 # Minimal poly of 1 + C(3) (?)
 
 P_1_3 = X**2 - 5*X + 4
+
+# Tests
+
+x0 = variable('x0')
+x1 = variable('x1')
+x2 = variable('x2')
+x3 = variable('x3')
+x4 = variable('x4')
+A = C(2)+C(3)
+PA = x4*A**4 + x3*A**3 + x2*A**2 + x1*A + x0
