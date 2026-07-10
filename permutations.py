@@ -189,6 +189,9 @@ class Polynomial:
         return Polynomial({mono: hom(coeff)
                            for mono, coeff in self.coeff.items()})
 
+    def degree(self):
+        return max(mono.degree() for mono in self.coeff)
+
     def minimal_degree(self):
         return min(mono.degree() for mono in self.coeff)
 
@@ -343,8 +346,10 @@ class Permutation:
                 continue
             a = list(map(int, sol[0]))
             P = sum(a[i]*X**i for i in range(deg + 1) if a[i] > 0)
+            P = Polynomial.of(P)
             Q = sum(-a[i]*X**i for i in range(deg + 1) if a[i] < 0)
-            assert P(self) == Q(self)
+            Q = Polynomial.of(Q)
+            assert P(**{'X': self}) == Q(**{'X': self})
             return Equation(P, Q)
 
 
@@ -429,6 +434,9 @@ class Equation:
         vars = self.vars()
         return {(var, cycle): variable(f'V[{var},{cycle}]')
                 for var in vars for cycle in self.B}
+
+    def degree(self):
+        return max(self.P.degree(), self.Q.degree())
 
     def as_natural_equations(self):
         V = self.natural_variables()
@@ -553,27 +561,3 @@ def solutions_natural_univariate_system(equations):
 X = variable('X')
 Y = variable('Y')
 Z = variable('Z')
-
-# Minimal poly of C(2) + C(3) + C(5)
-
-P_2_3_5 = (np.array([1, -35, 487, -3425, 12736, -23540, 16800, 0]) @
-           [X**i for i in reversed(range(8))])
-
-# Minimal poly of C(2) + C(3) + C(7)
-
-P_2_3_7 = (np.array([1, -48, 946, -9864, 58345, -194136, 333540, -226800, 0]) @
-           [X**i for i in reversed(range(9))])
-
-# Minimal poly of 1 + C(3) (?)
-
-P_1_3 = X**2 - 5*X + 4
-
-# Tests
-
-x0 = variable('x0')
-x1 = variable('x1')
-x2 = variable('x2')
-x3 = variable('x3')
-x4 = variable('x4')
-A = C(2)+C(3)
-PA = x4*A**4 + x3*A**3 + x2*A**2 + x1*A + x0
