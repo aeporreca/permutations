@@ -246,4 +246,3 @@ def equation_from_polynomial(R):
         else:
             Q -= coeff * Polynomial.of(mono)
     return Equation(P, Q)
-
