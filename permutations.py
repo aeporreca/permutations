@@ -98,13 +98,14 @@ class Polynomial:
             return '0'
         reprs = []
         for mono, coeff in self.coeff.items():
+            coeff = Permutation.of(coeff)
             if mono == 1:
                 reprs.append(repr(coeff))
             elif coeff == 1:
                 reprs.append(repr(mono))
-            # TODO: correct this printing stuff
-            # elif len(coeff.cycles) > 1:
-            #     reprs.append(f'({repr(coeff)})*{repr(mono)}')
+            # TODO: print negatives better
+            elif len(coeff.cycles()) > 1:
+                reprs.append(f'({repr(coeff)})*{repr(mono)}')
             else:
                 reprs.append(f'{repr(coeff)}*{repr(mono)}')
         return ' + '.join(reprs)
@@ -290,8 +291,11 @@ class Permutation:
             return NotImplemented
         cycles = defaultdict(int)
         for m, n in product(self._cycles, other._cycles):
-            cycles[lcm(m, n)] += (self._cycles[m] *
-                                  other._cycles[n] * gcd(m, n))
+            l = lcm(m, n)
+            cycles[l] += (self._cycles[m] *
+                          other._cycles[n] * gcd(m, n))
+            if cycles[l] == 0:
+                del cycles[l]
         return Permutation(cycles)
 
     def __rmul__(self, other):
@@ -401,6 +405,9 @@ class NaturalExtension:
         return set(chain.from_iterable(
             Permutation.of(prod(X)).cycles()
             for X in powerset(self.generators)))
+
+    def degree(self):
+        return len(self.basis())
 
 
 def variable(name):
