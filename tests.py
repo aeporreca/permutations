@@ -235,14 +235,213 @@ def test_min_poly_degrees_by_ncycles():
         print(f'{n}: {d}')
 
 
+# def equation_from_polynomial(R):
+#     P = Polynomial.of(0)
+#     Q = Polynomial.of(0)
+#     for mono, coeff in R.terms().items():
+#         coeff = Permutation.of(coeff)
+#         mult = list(coeff._cycles.values())[0]
+#         if mult > 0:
+#             P += coeff * Polynomial.of(mono)
+#         else:
+#             Q -= coeff * Polynomial.of(mono)
+#     return Equation(P, Q)
+
+
 def equation_from_polynomial(R):
     P = Polynomial.of(0)
     Q = Polynomial.of(0)
     for mono, coeff in R.terms().items():
         coeff = Permutation.of(coeff)
-        mult = list(coeff._cycles.values())[0]
-        if mult > 0:
-            P += coeff * Polynomial.of(mono)
-        else:
-            Q -= coeff * Polynomial.of(mono)
+        for length, mult in coeff._cycles.items():
+            term = mult * C(length) * Polynomial.of(mono)
+            if mult > 0:
+                P += term
+            else:
+                Q -= term
     return Equation(P, Q)
+
+
+# Tests
+
+A = C(2) + C(3) + C(5) + C(7)
+
+
+# Counterexample to glueing by multiplying by a cycle
+
+E1 = Equation(X + Y, C(3))
+E2 = Equation(C(2) + Z, C(2) * X)
+
+wrongE = Equation(C(5) * E1.P + C(7) * E2.P,
+                  C(5) * E1.Q + C(7) * E2.Q)
+
+E = equation_from_polynomial((C(5) - 5) * (E1.P - E1.Q) +
+                             (C(7) - 7) * (E2.P - E2.Q))
+
+
+# Test that P(X) + Q(Y) == 0 if and only if P(X) == Q(Y) == 0
+# with P, Q ∈ P[-1][X] but X, Y ∈ P
+
+def test_poly_sum_zero(P, Q, bound):
+    E = equation_from_polynomial(P + Q)
+    print(E)
+    for sizeA in range(bound + 1):
+        print(sizeA)
+        for A in Permutation.generate(sizeA):
+            for sizeB in range(bound + 1):
+                for B in Permutation.generate(sizeB):
+                    if E.eval(A, B) and P(A) != 0:
+                        print('FALSE!', A, B)
+
+
+# Test that P(X) + Q(Y) == 0 if and only if P(X) == Q(Y) == 0
+# with P, Q ∈ P[-1][X] AND X, Y ∈ P[-1]
+
+def test_poly_sum_zero_extended(P, Q, bound):
+    E = equation_from_polynomial(P + Q)
+    print(E)
+    for n1, n2, n3, n4 in product(range(bound + 1), repeat=4):
+        print(n1, n2, n3, n4)
+        for A1, A2, A3, A4 in product(Permutation.generate(n1),
+                                      Permutation.generate(n2),
+                                      Permutation.generate(n3),
+                                      Permutation.generate(n4)):
+            if E.eval(A1 - A2, A3 - A4) and P(A1 - A2) != 0:
+                print(f'FALSE! {A1}, {A2}, {A3}, {A4} -> {A1-A2}, {A3-A4}')
+
+
+# Boolean formula (x2 v x3 v x5) & (~x3 v ~x5 v ~x7)
+
+A = C(2) + C(3) + C(5) + C(7)
+# X <= A
+# C(2*3*5) <= C(2*3*5) * X
+# C(3*5*7)*(X + 1) <= C(3*5*7)*A
+
+# E = equation_from_polynomial((C(11) - 11) * (X - A) +
+#                              (C(13) - 13) * (C(2*3*5) - C(2*3*5) * X) +
+#                              (C(17) - 17) * (C(3*5*7)*(X + 1) - C(3*5*7)*A) +
+#                              Y)
+
+
+# Natural system:
+# Y + 1   == X
+# Y + 2*X == 5
+# has solution (2, 1)
+
+E = equation_from_polynomial((C(2) - 2) * (Y + 1 - X) +
+                             (C(3) - 3) * (Y + 2*X - 5))
+# E = equation_from_polynomial((C(3) - 2) * (Y + 1 - X) +
+#                              (3 + (-1)*C(2)) * (Y + 2*X - 5))
+
+
+# Natural system:
+# Y + 4*X == X**2 + 6
+# Y = X + 2
+# has solutions (1, 3) and (4, 6)
+
+E1 = equation_from_polynomial((C(5) - 5) * (Y + 4*X - X**2 - 6) +
+                              (C(11) - 11) * (Y - X - 2))
+
+
+def square(side):
+    return product(range(side + 1), repeat=2)
+
+
+def test_equation(E, domain):
+    for a, b in domain:
+        print(f'{a=}, {b=}')
+        for A, B in product(Permutation.generate(a),
+                            Permutation.generate(b)):
+            if E.eval(**{'X': A, 'Y': B}):
+                print(f'SOLUTION! X={A}, Y={B}')
+
+
+# Natural system:
+# Y + 4*X == X**2 + 6
+# Y = X + 1
+# has no solution
+
+E2 = equation_from_polynomial((C(2) - 2) * (Y + 4*X - X**2 - 6) +
+                              (C(3) - 3) * (Y - X - 1))
+
+
+# Natural system:
+# Y + X**2 + 4*X = 16
+# 2*Y = 3*X + 2
+# has one solution (2, 4)
+
+E3 = equation_from_polynomial((C(2) - 2) * (Y + X**2 + 4*X - 16) +
+                              (C(7) - 7) * (2*Y - 3*X - 2))
+
+# Natural system:
+# Y + X**2 + 4*X = 16
+# 2*Y = 3*X + 3
+# has no solution
+
+E4 = equation_from_polynomial((C(2) - 2) * (Y + X**2 + 4*X - 16) +
+                              (C(7) - 7) * (2*Y - 3*X - 3))
+
+E5 = equation_from_polynomial((C(13) - 13) * (Y + X**2 + 4*X - 16) +
+                              (C(17) - 17) * (2*Y - 3*X - 3))
+
+
+# Boolean formula (x2 v x3 v x5) & (~x3 v ~x5 v ~x7)
+
+A = C(2) + C(3) + C(5) + C(7)
+# X <= A
+# C(2*3*5) <= C(2*3*5)*X
+# C(3*5*7)*(X + 1) <= C(3*5*7)*A
+
+E6 = equation_from_polynomial((X - A)**2 +
+                              (C(2*3*5) - C(2*3*5)*X)**2 +
+                              (C(3*5*7)*(X + 1) - C(3*5*7)*A)**2 +
+                              Y)
+
+
+# Equations with glueing with (C(3)-2) and (3-C(2))
+
+G1 = C(3) - 2
+G2 = 3 + (-1)*C(2)
+# G1 = C(7) - 3
+# G2 = 7 + (-1)*C(3)
+
+E7 = equation_from_polynomial(G1 * (Y + 1 - X) +
+                              G2 * (Y + 2*X - 6))
+E8 = equation_from_polynomial(G1 * (Y + 1 - X) +
+                              G2 * (Y + 2*X - 5))
+E9 = equation_from_polynomial(G1 * (Y + 1 - X) +
+                              G2 * (Y + 2*X + Z - 5))
+E10 = equation_from_polynomial(G1 * (Y + 4*X - X**2 - 6) +
+                               G2 * (Y - X - 1))
+E11 = equation_from_polynomial(G1 * (Y + X**2 + 4*X - 16) +
+                               G2 * (2*Y - 3*X - 2))
+E12 = equation_from_polynomial(G1 * (X - Y) +
+                               G2 * 2)
+
+
+# Simulating matrices
+
+a = variable('a')
+b = variable('b')
+c = variable('c')
+d = variable('d')
+M = a*C(2) + b*C(4) + c*C(6) + d*C(8)
+
+
+# Irreducibility test
+
+def is_irreducible(A):
+    A = Permutation.of(A)
+    if A == 0 or A == 1:
+        return False
+    n = len(A)
+    found = False
+    for d in range(2, isqrt(n) + 1):
+        if n % d == 0:
+            m = n // d
+            for B1 in Permutation.generate(d):
+                for B2 in Permutation.generate(m):
+                    if B1 * B2 == A:
+                        print(f'{B1}, {B2}')
+                        found = True
+    return not found

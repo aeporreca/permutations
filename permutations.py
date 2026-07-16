@@ -503,6 +503,9 @@ class Equation:
                 if self.P(**{var: perm}) == self.Q(**{var: perm}):
                     yield perm
 
+    def eval(self, *values, **kwargs):
+        return self.P(*values, **kwargs) == self.Q(*values, **kwargs)
+
     # def solve(self):
     #     if self.is_univariate():
     #         return self.solve_univariate()
