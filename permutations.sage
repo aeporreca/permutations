@@ -15,7 +15,10 @@ class Permutations(Singleton, CombinatorialFreeModule):
     def one_basis(self):
         return 1
 
+    def _repr_(self):
+        return '(Semi)ring of permutations'
+
 
 PP = Permutations()
 C = PP.basis()
-X = PP['X'].gen()
+R.<X> = PP[]
