@@ -34,7 +34,7 @@ class Permutation(CombinatorialFreeModule.Element):
                 for B in PP.of_size(n):
                     if A * B == self:
                         return Factorization([(A, 1)]) * B.factor()
-        return Factorization([(self,1)])
+        return Factorization([(self, 1)])
 
 
 class Permutations(CombinatorialFreeModule):
@@ -43,7 +43,7 @@ class Permutations(CombinatorialFreeModule):
 
     def __init__(self):
         CombinatorialFreeModule.__init__(
-            self, ZZ, NN, prefix='C',
+            self, ZZ, PositiveIntegers(), prefix='C',
             category=Category.join(
                 (AlgebrasWithBasis(ZZ),
                  CommutativeRings())))
