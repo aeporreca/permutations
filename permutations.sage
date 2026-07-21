@@ -25,7 +25,7 @@ class Permutation(CombinatorialFreeModule.Element):
     def factor(self):
         if self == 0:
             raise ArithmeticError(
-                "factorization of 0 is not defined")
+                'factorization of 0 is not defined')
         if self == 1:
             return Factorization([])
         size = self.size()
@@ -74,7 +74,9 @@ class Permutations(CombinatorialFreeModule):
 
 
 PP = Permutations()
+
 C = PP.basis()
+
 R.<X> = PP[]
 
 
