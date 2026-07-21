@@ -3,8 +3,9 @@ class Permutations(CombinatorialFreeModule):
     def __init__(self):
         CombinatorialFreeModule.__init__(
             self, ZZ, NN, prefix='C',
-            category=Category.join((AlgebrasWithBasis(ZZ),
-                                    CommutativeRings())))
+            category=Category.join(
+                (AlgebrasWithBasis(ZZ),
+                 CommutativeRings())))
 
     def product_on_basis(self, left, right):
         return gcd(left, right) * C[lcm(left, right)]
