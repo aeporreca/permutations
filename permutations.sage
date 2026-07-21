@@ -6,7 +6,8 @@ class Permutations(Singleton, CombinatorialFreeModule):
     def __init__(self):
         CombinatorialFreeModule.__init__(
             self, ZZ, NN, prefix='C',
-            category=AlgebrasWithBasis(ZZ))
+            category=Category.join((AlgebrasWithBasis(ZZ),
+                                    CommutativeRings())))
 
     def product_on_basis(self, left, right):
         C = self.basis()
