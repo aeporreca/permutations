@@ -1,7 +1,4 @@
-from sage.misc.fast_methods import Singleton
-
-
-class Permutations(Singleton, CombinatorialFreeModule):
+class Permutations(CombinatorialFreeModule):
 
     def __init__(self):
         CombinatorialFreeModule.__init__(
@@ -10,7 +7,6 @@ class Permutations(Singleton, CombinatorialFreeModule):
                                     CommutativeRings())))
 
     def product_on_basis(self, left, right):
-        C = self.basis()
         return gcd(left, right) * C[lcm(left, right)]
 
     def one_basis(self):
