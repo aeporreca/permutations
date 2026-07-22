@@ -30,7 +30,7 @@ class Permutation(CombinatorialFreeModule.Element):
             return Factorization([])
         size = self.size()
         for m, n in proper_divisor_pairs(size):
-            for A in PP.of_size(m):
+            for A in PP.irreducibles_of_size(m):
                 for B in PP.of_size(n):
                     if A * B == self:
                         return Factorization([(A, 1)]) * B.factor()
@@ -58,6 +58,15 @@ class Permutations(CombinatorialFreeModule):
         return '(Semi)ring of Permutations'
 
     @staticmethod
+    def irreducibles():
+        for size in NN:
+            yield from PP.irreducibles_of_size(size)
+
+    def __iter__(self):
+        for size in NN:
+            yield from PP.of_size(size)
+
+    @staticmethod
     def of_size(size):
         for partition in Partitions(size):
             yield PP.sum(C[n] for n in partition)
@@ -67,10 +76,6 @@ class Permutations(CombinatorialFreeModule):
         for A in PP.of_size(size):
             if A.is_irreducible():
                 yield A
-
-    def __iter__(self):
-        for size in NN:
-            yield from self.of_size(size)
 
 
 PP = Permutations()
