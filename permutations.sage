@@ -14,13 +14,10 @@ class Permutation(CombinatorialFreeModule.Element):
     def is_irreducible(self):
         if self == 0 or self == 1:
             return False
-        size = self.size()
-        for m, n in proper_divisor_pairs(size):
-            for A in PP.of_size(m):
-                for B in PP.of_size(n):
-                    if A * B == self:
-                        return False
-        return True
+        return all(A * B != self
+                   for m, n in proper_divisor_pairs(self.size())
+                   for A in PP.of_size(m)
+                   for B in PP.of_size(n))
 
     def factor(self):
         if self == 0:
@@ -28,8 +25,7 @@ class Permutation(CombinatorialFreeModule.Element):
                 'factorization of 0 is not defined')
         if self == 1:
             return Factorization([])
-        size = self.size()
-        for m, n in proper_divisor_pairs(size):
+        for m, n in proper_divisor_pairs(self.size()):
             for A in PP.irreducibles_of_size(m):
                 for B in PP.of_size(n):
                     if A * B == self:
