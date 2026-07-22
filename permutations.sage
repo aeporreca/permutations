@@ -8,8 +8,8 @@ class Permutation(CombinatorialFreeModule.Element):
         return len(self) == 1 and self.leading_coefficient() == 1
 
     def size(self):
-        return sum(multiplicity * length
-                   for length, multiplicity in self.items())
+        return NN.sum(multiplicity * length
+                      for length, multiplicity in self.items())
 
     def is_irreducible(self):
         if self == 0 or self == 1:
@@ -72,6 +72,16 @@ class Permutations(CombinatorialFreeModule):
         for A in PP.of_size(size):
             if A.is_irreducible():
                 yield A
+
+    @staticmethod
+    def solve_univariate(P):
+        identity = lambda i: i
+        f = PP.module_morphism(identity, codomain=ZZ)
+        q = P.map_coefficients(f)
+        roots = q.roots(multiplicities=False)
+        return [A for size in roots
+                for A in PP.of_size(size)
+                if P(A) == 0]
 
 
 PP = Permutations()
