@@ -21,10 +21,13 @@ class Permutation(CombinatorialFreeModule.Element):
 
     def factor(self):
         if self == 0:
-            raise ArithmeticError(
-                'factorization of 0 is not defined')
+            raise ArithmeticError('factorization of 0 is not defined')
         if self == 1:
             return Factorization([])
+        if self.is_cycle():
+            # Optimisation for use with divisors()
+            F = factor(self.size())
+            return Factorization([(C[b^e], 1) for b, e in list(F)])
         for m, n in proper_divisor_pairs(self.size()):
             for A in PP.irreducibles_of_size(m):
                 for B in PP.of_size(n):
@@ -75,28 +78,46 @@ class Permutations(CombinatorialFreeModule):
 
     @staticmethod
     def solve_univariate(P):
+        if len(P.parent().variable_names()) != 1:
+            raise ValueError(f'{P} is not univariate')
         identity = lambda i: i
-        f = PP.module_morphism(identity, codomain=ZZ)
-        q = P.map_coefficients(f)
+        cardinality = PP.module_morphism(identity, codomain=ZZ)
+        q = P.map_coefficients(cardinality)
         roots = q.roots(multiplicities=False)
         return [A for size in roots
                 for A in PP.of_size(size)
                 if P(A) == 0]
+
+    @staticmethod
+    def up_closure(generators):
+        return sorted(set(PP.prod(S).leading_monomial()
+                          for S in powerset(generators)))
+
+    @staticmethod
+    def down_closure(generators):
+        return sorted(set(div for gen in generators
+                          for term in gen.terms()
+                          for cycle in term.cycles()
+                          for div in divisors(cycle)))
+
+    # @staticmethod
+    # def solve_linear(P):
+    #     if P.degree() != 1:
+    #         raise ValueError(f'{P} is not linear')
+    #     D = Permutations.down_closure(P.coefficients())
+    #     B = Permutations.up_closure(D)
+    #     return B
+    #     # TODO here
 
 
 PP = Permutations()
 
 C = PP.basis()
 
-R.<X> = PP[]
+R.<X, Y, Z> = PP[]
 
 
 def proper_divisor_pairs(n):
     return ((d, n // d)
              for d in range(2, isqrt(n) + 1)
              if n % d == 0)
-
-
-def up_closure(generators):
-    return sorted(set(PP.prod(S).leading_monomial()
-                      for S in powerset(generators)))
