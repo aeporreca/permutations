@@ -19,6 +19,17 @@ class Permutation(CombinatorialFreeModule.Element):
                    for A in PP.of_size(m)
                    for B in PP.of_size(n))
 
+    def sqrt(self, n=2):
+        root = PP(0)
+        power = PP(0)
+        while power.size() < self.size():
+            length, _ = min(self - power)
+            root += C[length]
+            power = root^n
+        if power != self:
+            return None
+        return root
+
     def factor(self):
         if self == 0:
             raise ArithmeticError('factorization of 0 is not defined')
