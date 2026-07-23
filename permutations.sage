@@ -112,8 +112,8 @@ class Permutations(CombinatorialFreeModule):
     def _solve_univariate(P, all=False):
         if _is_root_extraction(P):
             return PP._solve_root_extraction(P)
-        elif not all and _is_pseudo_injective(P):
-            return PP._solve_pseudo_injective(P, all=False)
+        elif _is_pseudo_injective(P):
+            return PP._solve_pseudo_injective(P, all=all)
         else:
             return PP._solve_generic_univariate(P, all=all)
 
@@ -156,7 +156,6 @@ class Permutations(CombinatorialFreeModule):
             if P(X).size() > B.size() or not P(X) <= B:
                 return []
         return [X]
-
 
     @staticmethod
     def _solve_linear(P):
