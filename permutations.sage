@@ -140,6 +140,7 @@ class Permutations(CombinatorialFreeModule):
     @staticmethod
     def _solve_pseudo_injective(P, all=False):
         if all:
+            # TODO: Implement the enumeration algorithm
             return PP._solve_generic_univariate(P, all=True)
         B = -P.constant_coefficient()
         P += B
@@ -160,7 +161,7 @@ class Permutations(CombinatorialFreeModule):
         D = Permutations.down_closure(P.coefficients())
         B = Permutations.up_closure(D)
         return B
-        # TODO here
+        # TODO: Implement the rest
 
 
 PP = Permutations()
