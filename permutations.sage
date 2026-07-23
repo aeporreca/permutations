@@ -38,7 +38,6 @@ class Permutation(CombinatorialFreeModule.Element):
         if self == 1:
             return Factorization([])
         if self.is_cycle():
-            # Optimisation (notably for use with divisors())
             F = factor(self.size())
             return Factorization([(C[b^e], 1) for b, e in F])
         for m, n in _proper_divisor_pairs(self.size()):
@@ -215,5 +214,7 @@ def _seed(P):
 
 
 # Tests
+
+# This is pseudo-injective
 
 P = C[2]*X^2 + (C[4] + C[6])*X - 16*C[2] - 4*C[4] - 18*C[6] - C[12]
