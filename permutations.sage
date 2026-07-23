@@ -104,7 +104,7 @@ class Permutations(CombinatorialFreeModule):
     @staticmethod
     def solve(P, all=False):
         if _is_univariate(P):
-            return PP._solve_univariate(P)
+            return PP._solve_univariate(P, all=all)
         raise NotImplementedError(
             'unable to solve multivariate equations')
 
