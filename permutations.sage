@@ -101,24 +101,24 @@ class Permutations(CombinatorialFreeModule):
                           for cycle in term.cycles()
                           for div in divisors(cycle)))
 
-    # @staticmethod
-    # def solve_linear(P):
-    #     if P.degree() != 1:
-    #         raise ValueError(f'{P} is not linear')
-    #     D = Permutations.down_closure(P.coefficients())
-    #     B = Permutations.up_closure(D)
-    #     return B
-    #     # TODO here
+    @staticmethod
+    def solve(P, all=False):
+        if _is_univariate(P):
+            return PP._solve_univariate(P)
+        raise NotImplementedError(
+            'unable to solve multivariate equations')
 
     @staticmethod
-    def solve_univariate(P, all=False):
-        if len(P.variables()) > 1:
-            raise ValueError(f'{P} is not univariate')
-        if (len(P.terms()) == 2 and min(P.exponents()) == 0
-              or len(P.terms()) == 1) and P.leading_coefficient() == 1:
-            # P == X^n - A
-            A = -P.constant_coefficient()
-            return A.sqrt(P.degree())
+    def _solve_univariate(P, all=False):
+        if _is_root_extraction(P):
+            return PP._solve_root_extraction(P)
+        elif not all and _is_pseudo_injective(P):
+            return PP._solve_pseudo_injective(P, all=False)
+        else:
+            return PP._solve_generic_univariate(P, all=all)
+
+    @staticmethod
+    def _solve_generic_univariate(P, all=False):
         identity = lambda i: i
         cardinality = PP.module_morphism(identity, codomain=ZZ)
         q = P.map_coefficients(cardinality)
@@ -134,10 +134,17 @@ class Permutations(CombinatorialFreeModule):
         return []
 
     @staticmethod
-    def solve_pseudo_injective(P, all=False):
+    def _solve_root_extraction(P):
+        A = -P.constant_coefficient()
+        root = A.sqrt(P.degree())
+        if root is not None:
+            return [root]
+        return []
+
+    @staticmethod
+    def _solve_pseudo_injective(P, all=False):
         if all:
-            raise NotImplementedError(
-                'enumeration of all solutions not implemented yet')
+            return PP._solve_generic_univariate(P, all=True)
         B = -P.constant_coefficient()
         P += B
         if not _is_pseudo_injective(P):
@@ -149,6 +156,16 @@ class Permutations(CombinatorialFreeModule):
             if P(X).size() > B.size() or not P(X) <= B:
                 return []
         return [X]
+
+
+    @staticmethod
+    def _solve_linear(P):
+        if P.degree() != 1:
+            raise ValueError(f'{P} is not linear')
+        D = Permutations.down_closure(P.coefficients())
+        B = Permutations.up_closure(D)
+        return B
+        # TODO here
 
 
 PP = Permutations()
@@ -180,6 +197,15 @@ def _cycles(P):
                   for x in c.cycles())
 
 
+def _is_univariate(P):
+    return len(P.parent().gens()) <= 1
+
+
+def _is_root_extraction(P):
+    return (len(P.terms()) == 2 and min(P.exponents()) == 0
+            or len(P.terms()) == 1) and P.leading_coefficient() == 1
+
+
 def _is_pseudo_injective(P):
     cycles = _cycles(P)
     length = cycles[0].size()
@@ -190,13 +216,3 @@ def _is_pseudo_injective(P):
 def _seed(P):
     cycles = _cycles(P)
     return cycles[0].size()
-
-
-# Tests
-
-_R.<Y, Z> = PP[]
-
-P = C[3]*Y + (C[2] + C[7])*Z - C[6]
-P = C[2]*X^2 + (C[4] + C[6])*X - 16*C[2] - 4*C[4] - 18*C[6] - C[12]
-n = prod(primes_first_n(8))
-P = (X^5 - C[n]^5) + (X - C[n])
