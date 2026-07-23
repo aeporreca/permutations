@@ -1,3 +1,6 @@
+from sage.functions.log import logb
+
+
 class Permutation(CombinatorialFreeModule.Element):
 
     def cycles(self):
@@ -98,26 +101,54 @@ class Permutations(CombinatorialFreeModule):
                           for cycle in term.cycles()
                           for div in divisors(cycle)))
 
-    @staticmethod
-    def solve_linear(P):
-        if P.degree() != 1:
-            raise ValueError(f'{P} is not linear')
-        D = Permutations.down_closure(P.coefficients())
-        B = Permutations.up_closure(D)
-        return B
-        # TODO here
+    # @staticmethod
+    # def solve_linear(P):
+    #     if P.degree() != 1:
+    #         raise ValueError(f'{P} is not linear')
+    #     D = Permutations.down_closure(P.coefficients())
+    #     B = Permutations.up_closure(D)
+    #     return B
+    #     # TODO here
 
     @staticmethod
-    def solve_univariate(P):
+    def solve_univariate(P, all=False):
         if len(P.variables()) > 1:
             raise ValueError(f'{P} is not univariate')
+        if (len(P.terms()) == 2 and min(P.exponents()) == 0
+              or len(P.terms()) == 1) and P.leading_coefficient() == 1:
+            # P == X^n - A
+            A = -P.constant_coefficient()
+            return A.sqrt(P.degree())
         identity = lambda i: i
         cardinality = PP.module_morphism(identity, codomain=ZZ)
         q = P.map_coefficients(cardinality)
         roots = q.roots(multiplicities=False)
-        return [A for size in roots
-                for A in PP.of_size(size)
-                if P(A) == 0]
+        solutions = (A for size in roots
+                     for A in PP.of_size(size)
+                     if P(A) == 0)
+        if all:
+            return list(solutions)
+        solution = next(solutions, None)
+        if solution:
+            return [solution]
+        return []
+
+    @staticmethod
+    def solve_pseudo_injective(P, all=False):
+        if all:
+            raise NotImplementedError(
+                'enumeration of all solutions not implemented yet')
+        B = -P.constant_coefficient()
+        P += B
+        if not _is_pseudo_injective(P):
+            raise ValueError(f'{P} is not pseudo-injective')
+        X = PP(0)
+        s = _seed(P)
+        while P(X) != B:
+            X += C[_alcm(s, B - P(X))]
+            if P(X).size() > B.size() or not P(X) <= B:
+                return []
+        return [X]
 
 
 PP = Permutations()
@@ -133,8 +164,39 @@ def _proper_divisor_pairs(n):
              if n % d == 0)
 
 
+def _alcm(a, b):
+    if a not in NN:
+        a = min(a.cycles()).size()
+    if b not in NN:
+        b = min(b.cycles()).size()
+    if b % a != 0:
+        raise ValueError(f'{a} does not divide {b}')
+    k = ceil(logb(9, 2))
+    return gcd(NN(b/a)^k, b)
+
+
+def _cycles(P):
+    return sorted(x for c in P.coefficients()
+                  for x in c.cycles())
+
+
+def _is_pseudo_injective(P):
+    cycles = _cycles(P)
+    length = cycles[0].size()
+    return all(cycle.size() % length == 0
+               for cycle in cycles)
+
+
+def _seed(P):
+    cycles = _cycles(P)
+    return cycles[0].size()
+
+
 # Tests
 
 _R.<Y, Z> = PP[]
 
-P = C[3]*Y + C[2]*Z - C[6]
+P = C[3]*Y + (C[2] + C[7])*Z - C[6]
+P = C[2]*X^2 + (C[4] + C[6])*X - 16*C[2] - 4*C[4] - 18*C[6] - C[12]
+n = prod(primes_first_n(8))
+P = (X^5 - C[n]^5) + (X - C[n])
