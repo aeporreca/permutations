@@ -118,8 +118,8 @@ class Permutations(CombinatorialFreeModule):
 
     @staticmethod
     def _solve_generic_univariate(P, all=False):
-        identity = lambda i: i
-        cardinality = PP.module_morphism(identity, codomain=ZZ)
+        cycle_len = lambda i: i
+        cardinality = PP.module_morphism(cycle_len, codomain=ZZ)
         q = P.map_coefficients(cardinality)
         roots = q.roots(multiplicities=False)
         solutions = (A for size in roots
