@@ -23,8 +23,7 @@ class Permutation(CombinatorialFreeModule.Element):
         root = PP(0)
         power = PP(0)
         while power.size() < self.size():
-            length, _ = min(self - power)
-            root += C[length]
+            root += min((self - power).cycles())
             power = root^n
         if power != self:
             return None
