@@ -111,7 +111,7 @@ class Permutations(CombinatorialFreeModule):
     @staticmethod
     def _solve_univariate(P, all=False):
         if _is_root_extraction(P):
-            return PP._solve_root_extraction(P)
+            return PP._solve_root_extraction(P, all=all)
         elif _is_pseudo_injective(P):
             return PP._solve_pseudo_injective(P, all=all)
         else:
@@ -128,18 +128,15 @@ class Permutations(CombinatorialFreeModule):
                      if P(A) == 0)
         if all:
             return list(solutions)
-        solution = next(solutions, None)
-        if solution:
-            return [solution]
-        return []
+        return next(solutions, None)
 
     @staticmethod
-    def _solve_root_extraction(P):
+    def _solve_root_extraction(P, all=False):
         A = -P.constant_coefficient()
         root = A.sqrt(P.degree())
         if root is not None:
-            return [root]
-        return []
+            return [root] if all else root
+        return [] if all else None
 
     @staticmethod
     def _solve_pseudo_injective(P, all=False):
@@ -151,11 +148,11 @@ class Permutations(CombinatorialFreeModule):
             raise ValueError(f'{P} is not pseudo-injective')
         X = PP(0)
         s = _seed(P)
-        while P(X) != B:
+        while P(X) < B:
             X += C[_alcm(s, B - P(X))]
-            if P(X).size() > B.size() or not P(X) <= B:
-                return []
-        return [X]
+        if P(X) != B:
+            return None
+        return X
 
     @staticmethod
     def _solve_linear(P):
@@ -215,3 +212,8 @@ def _is_pseudo_injective(P):
 def _seed(P):
     cycles = _cycles(P)
     return cycles[0].size()
+
+
+# Tests
+
+P = C[2]*X^2 + (C[4] + C[6])*X - 16*C[2] - 4*C[4] - 18*C[6] - C[12]
