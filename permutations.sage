@@ -8,14 +8,14 @@ class Permutation(CombinatorialFreeModule.Element):
         return len(self) == 1 and self.leading_coefficient() == 1
 
     def size(self):
-        return NN.sum(multiplicity * length
-                      for length, multiplicity in self.items())
+        return int(sum(multiplicity * length
+                       for length, multiplicity in self.items()))
 
     def is_irreducible(self):
         if self == 0 or self == 1:
             return False
         return all(A * B != self
-                   for m, n in proper_divisor_pairs(self.size())
+                   for m, n in _proper_divisor_pairs(self.size())
                    for A in PP.of_size(m)
                    for B in PP.of_size(n))
 
@@ -25,10 +25,10 @@ class Permutation(CombinatorialFreeModule.Element):
         if self == 1:
             return Factorization([])
         if self.is_cycle():
-            # Optimisation for use with divisors()
+            # Optimisation (notably for use with divisors())
             F = factor(self.size())
-            return Factorization([(C[b^e], 1) for b, e in list(F)])
-        for m, n in proper_divisor_pairs(self.size()):
+            return Factorization([(C[b^e], 1) for b, e in F])
+        for m, n in _proper_divisor_pairs(self.size()):
             for A in PP.irreducibles_of_size(m):
                 for B in PP.of_size(n):
                     if A * B == self:
@@ -77,18 +77,6 @@ class Permutations(CombinatorialFreeModule):
                 yield A
 
     @staticmethod
-    def solve_univariate(P):
-        if len(P.parent().variable_names()) != 1:
-            raise ValueError(f'{P} is not univariate')
-        identity = lambda i: i
-        cardinality = PP.module_morphism(identity, codomain=ZZ)
-        q = P.map_coefficients(cardinality)
-        roots = q.roots(multiplicities=False)
-        return [A for size in roots
-                for A in PP.of_size(size)
-                if P(A) == 0]
-
-    @staticmethod
     def up_closure(generators):
         return sorted(set(PP.prod(S).leading_monomial()
                           for S in powerset(generators)))
@@ -100,24 +88,43 @@ class Permutations(CombinatorialFreeModule):
                           for cycle in term.cycles()
                           for div in divisors(cycle)))
 
-    # @staticmethod
-    # def solve_linear(P):
-    #     if P.degree() != 1:
-    #         raise ValueError(f'{P} is not linear')
-    #     D = Permutations.down_closure(P.coefficients())
-    #     B = Permutations.up_closure(D)
-    #     return B
-    #     # TODO here
+    @staticmethod
+    def solve_linear(P):
+        if P.degree() != 1:
+            raise ValueError(f'{P} is not linear')
+        D = Permutations.down_closure(P.coefficients())
+        B = Permutations.up_closure(D)
+        return B
+        # TODO here
+
+    @staticmethod
+    def solve_univariate(P):
+        if len(P.variables()) > 1:
+            raise ValueError(f'{P} is not univariate')
+        identity = lambda i: i
+        cardinality = PP.module_morphism(identity, codomain=ZZ)
+        q = P.map_coefficients(cardinality)
+        roots = q.roots(multiplicities=False)
+        return [A for size in roots
+                for A in PP.of_size(size)
+                if P(A) == 0]
 
 
 PP = Permutations()
 
 C = PP.basis()
 
-R.<X, Y, Z> = PP[]
+_R.<X> = PP[]
 
 
-def proper_divisor_pairs(n):
+def _proper_divisor_pairs(n):
     return ((d, n // d)
              for d in range(2, isqrt(n) + 1)
              if n % d == 0)
+
+
+# Tests
+
+_R.<Y, Z> = PP[]
+
+P = C[3]*Y + C[2]*Z - C[6]
