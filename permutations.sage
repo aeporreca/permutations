@@ -147,9 +147,9 @@ class Permutations(CombinatorialFreeModule):
         if not _is_pseudo_injective(P):
             raise ValueError(f'{P} is not pseudo-injective')
         X = PP(0)
-        s = _seed(P)
+        seed = _seed(P)
         while P(X) < B:
-            X += C[_alcm(s, B - P(X))]
+            X += C[_alcm(seed, B - P(X))]
         if P(X) != B:
             return None
         return X
@@ -203,9 +203,14 @@ def _is_root_extraction(P):
 
 
 def _is_pseudo_injective(P):
+    # No negative ints in nonconstant coefficients
+    nonconst_coeffs = P.coefficients()[1:]
+    if any(int_coeff < 0 for coeff in nonconst_coeffs
+           for int_coeff in coeff.coefficients()):
+        return False
     cycles = _cycles(P)
-    length = cycles[0].size()
-    return all(cycle.size() % length == 0
+    seed = cycles[0].size()
+    return all(cycle.size() % seed == 0
                for cycle in cycles)
 
 
