@@ -184,7 +184,7 @@ def _alcm(a, b):
         b = min(b.cycles()).size()
     if b % a != 0:
         raise ValueError(f'{a} does not divide {b}')
-    k = ceil(logb(9, 2))
+    k = ceil(logb(b, 2))
     return gcd(NN(b/a)^k, b)
 
 
