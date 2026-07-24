@@ -22,12 +22,12 @@ class Permutation(CombinatorialFreeModule.Element):
                    for A in PP.of_size(m)
                    for B in PP.of_size(n))
 
-    def sqrt(self, n=2):
+    def sqrt(self, k=2):
         root = PP(0)
         power = PP(0)
         while power.size() < self.size():
             root += min((self - power).cycles())
-            power = root^n
+            power = root^k
         if power != self:
             return None
         return root
@@ -133,9 +133,9 @@ class Permutations(CombinatorialFreeModule):
     def _solve_root_extraction(P, all=False):
         A = -P.constant_coefficient()
         root = A.sqrt(P.degree())
-        if root is not None:
-            return [root] if all else root
-        return [] if all else None
+        if root is None:
+            return [] if all else None
+        return [root] if all else root
 
     @staticmethod
     def _solve_pseudo_injective(P, all=False):
@@ -149,7 +149,7 @@ class Permutations(CombinatorialFreeModule):
         X = PP(0)
         seed = _seed(P)
         while P(X) < B:
-            X += C[_alcm(seed, B - P(X))]
+            X += C[_anti_lcm(seed, B - P(X))]
         if P(X) != B:
             return None
         return X
@@ -164,20 +164,13 @@ class Permutations(CombinatorialFreeModule):
         # TODO: Implement the rest
 
 
-PP = Permutations()
-
-C = PP.basis()
-
-_R.<X> = PP[]
-
-
 def _proper_divisor_pairs(n):
     return ((d, n // d)
              for d in range(2, isqrt(n) + 1)
              if n % d == 0)
 
 
-def _alcm(a, b):
+def _anti_lcm(a, b):
     if a not in NN:
         a = min(a.cycles()).size()
     if b not in NN:
@@ -185,7 +178,7 @@ def _alcm(a, b):
     if b % a != 0:
         raise ValueError(f'{a} does not divide {b}')
     k = ceil(logb(b, 2))
-    return gcd(NN(b/a)^k, b)
+    return gcd(int(b/a)^k, b)
 
 
 def _cycles(P):
@@ -217,6 +210,13 @@ def _is_pseudo_injective(P):
 def _seed(P):
     cycles = _cycles(P)
     return cycles[0].size()
+
+
+# Constants
+
+PP = Permutations()
+C = PP.basis()
+_R.<X> = PP[]
 
 
 # Tests
