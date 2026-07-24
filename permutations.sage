@@ -22,7 +22,12 @@ class Permutation(CombinatorialFreeModule.Element):
                    for A in PP.of_size(m)
                    for B in PP.of_size(n))
 
+    def is_prime(self):
+        # https://doi.org/10.1016/j.tcs.2026.115879
+        return False
+
     def sqrt(self, k=2):
+        # https://doi.org/10.48550/arXiv.2604.04065
         if self._has_negative_terms():
             raise NotImplementedError(f'unable to compute sqrt of {P}')
         root = PP(0)
@@ -73,25 +78,24 @@ class Permutations(CombinatorialFreeModule):
     def _repr_(self):
         return '(Semi)ring of Permutations'
 
+    def __iter__(self):
+        return (A for size in NN
+                for A in PP.of_size(size))
+
     @staticmethod
     def irreducibles():
-        for size in NN:
-            yield from PP.irreducibles_of_size(size)
-
-    def __iter__(self):
-        for size in NN:
-            yield from PP.of_size(size)
+        return (A for A in PP
+                if A.is_irreducible())
 
     @staticmethod
     def of_size(size):
-        for partition in Partitions(size):
-            yield PP.sum(C[n] for n in partition)
+        return (PP.sum(C[n] for n in partition)
+                for partition in Partitions(size))
 
     @staticmethod
     def irreducibles_of_size(size):
-        for A in PP.of_size(size):
-            if A.is_irreducible():
-                yield A
+        return (A for A in PP.of_size(size)
+                if A.is_irreducible())
 
     @staticmethod
     def up_closure(generators):
@@ -114,6 +118,7 @@ class Permutations(CombinatorialFreeModule):
 
     @staticmethod
     def _solve_univariate(P, all=False):
+        assert _is_univariate(P)
         if _is_root_extraction(P):
             return PP._solve_root_extraction(P, all=all)
         elif _is_pseudo_injective(P):
@@ -136,6 +141,7 @@ class Permutations(CombinatorialFreeModule):
 
     @staticmethod
     def _solve_root_extraction(P, all=False):
+        assert _is_root_extraction(P)
         A = -P.constant_coefficient()
         root = A.sqrt(P.degree())
         if root is None:
@@ -144,8 +150,8 @@ class Permutations(CombinatorialFreeModule):
 
     @staticmethod
     def _solve_pseudo_injective(P, all=False):
-        if not _is_pseudo_injective(P):
-            raise ValueError(f'{P} is not pseudo-injective')
+        # https://doi.org/10.48550/arXiv.2604.04065
+        assert _is_pseudo_injective(P)
         if all:
             # TODO: Implement the enumeration algorithm
             return PP._solve_generic_univariate(P, all=True)
