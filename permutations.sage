@@ -23,6 +23,8 @@ class Permutation(CombinatorialFreeModule.Element):
                    for B in PP.of_size(n))
 
     def sqrt(self, k=2):
+        if self._has_negative_terms():
+            raise NotImplementedError(f'unable to compute sqrt of {P}')
         root = PP(0)
         power = PP(0)
         while power.size() < self.size():
@@ -46,6 +48,9 @@ class Permutation(CombinatorialFreeModule.Element):
                     if A * B == self:
                         return Factorization([(A, 1)]) * B.factor()
         return Factorization([(self, 1)])
+
+    def _has_negative_terms(self):
+        return any(coeff < 0 for coeff in self.coefficients())
 
 
 class Permutations(CombinatorialFreeModule):
@@ -139,13 +144,13 @@ class Permutations(CombinatorialFreeModule):
 
     @staticmethod
     def _solve_pseudo_injective(P, all=False):
+        if not _is_pseudo_injective(P):
+            raise ValueError(f'{P} is not pseudo-injective')
         if all:
             # TODO: Implement the enumeration algorithm
             return PP._solve_generic_univariate(P, all=True)
         B = -P.constant_coefficient()
         P += B
-        if not _is_pseudo_injective(P):
-            raise ValueError(f'{P} is not pseudo-injective')
         X = PP(0)
         seed = _seed(P)
         while P(X) < B:
@@ -196,10 +201,9 @@ def _is_root_extraction(P):
 
 
 def _is_pseudo_injective(P):
-    # No negative ints in nonconstant coefficients
     nonconst_coeffs = P.coefficients()[1:]
-    if any(int_coeff < 0 for coeff in nonconst_coeffs
-           for int_coeff in coeff.coefficients()):
+    if any(coeff._has_negative_terms()
+           for coeff in nonconst_coeffs):
         return False
     cycles = _cycles(P)
     seed = cycles[0].size()
