@@ -1,7 +1,7 @@
 # Petanca 🪩
 
 Petanca[^name] es una bibliotèca SageMath per far de calculs dins lo semianèl dels sistèmas dinamics or, in English, a [SageMath](https://www.sagemath.org) library for computing in the [semiring of dynamical systems](https://doi.org/10.1007/978-3-319-99813-8_27).
-It’s pronounced [[pe'tan.kɔ]](https://en.wikipedia.org/wiki/Occitan_phonology).
+It’s [pronounced](https://en.wikipedia.org/wiki/Occitan_phonology) [peˈtaŋkɔ].
 
 At the moment, only permutations (bijective dynamical systems) are being implemented.
 Hopefully, one day the rest will come too.
