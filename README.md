@@ -1,4 +1,4 @@
-# Petanca
+# Petanca 🪩
 
 Una bibliotèca [SageMath](https://www.sagemath.org) per far de calculs dins lo semianèl dels sistèmas dinamics[^name] or, in English, a [SageMath](https://www.sagemath.org) library for computing in the semiring of dynamical systems.
 
