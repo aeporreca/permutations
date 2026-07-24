@@ -8,5 +8,5 @@ Hopefully, one day non-bijective ones will come too.
 
 The name of the library reflects the fact that the semiring of dynamical systems was first defined as such in Nice in 2015, where [the first PhD thesis](https://theses.fr/2022COAZ4062) on the topic was later written, and a lot of people working on this topic are, as of 2026, either in Marseille (where [the second PhD thesis](https://theses.fr/s373308) was written) or in Nice.
 These two cities belong to region where the game of [pétanque](https://en.wikipedia.org/wiki/Pétanque) was developed and [lenga d’òc](https://en.wikipedia.org/wiki/Occitan_language) (specifically the Provençal dialect) is traditionally spoken.
-“Petanca” is, of course, “pétanque” in Occitan.
+“Petanca” is, of course, “pétanque” in lenga d’òc.
 Furthermore, bijective dynamical systems, when they are depicted as cycle-shaped graphs, remind one of the developers of this library of pétanque boules.
