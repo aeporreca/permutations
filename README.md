@@ -1,4 +1,4 @@
-# Petanca [pe'tan.kɔ] 🪩
+# Petanca 🪩 [pe'tan.kɔ]
 
 Una bibliotèca SageMath per far de calculs dins lo semianèl dels sistèmas dinamics[^name] or, in English, a [SageMath](https://www.sagemath.org) library for computing in the [semiring of dynamical systems](https://doi.org/10.1007/978-3-319-99813-8_27).
 
